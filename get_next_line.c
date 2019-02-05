@@ -6,29 +6,33 @@
 /*   By: grota <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2017/12/18 12:51:53 by grota             #+#    #+#             */
-/*   Updated: 2019/02/03 18:03:23 by grota            ###   ########.fr       */
+/*   Updated: 2019/02/05 14:40:44 by grota            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 
-static int		ft_split_next(char **line, t_gnl *gnl)
+static int		ft_buf_manip(char **line, t_gnl *gnl, char **buf, unsigned int flag)
 {
-	if (!(gnl->line) || !ft_isinstr(gnl->line, '\n'))
-		return (0);
-	*line = ft_strsub(gnl->line, 0, ft_strclen(gnl->line, '\n'));
-	gnl->line = ft_strsub(gnl->line, ft_strclen(gnl->line, '\n') + 1, ft_strlen(gnl->line));
+	if (flag & 1)
+	{
+		(void)buf;
+		if (!(gnl->line) || !ft_isinstr(gnl->line, '\n'))
+			return (0);
+		*line = ft_strsubf(gnl->line, 0, ft_strclen(gnl->line, '\n'));
+		gnl->line = ft_strsubf(gnl->line, ft_strclen(gnl->line, '\n') + 1, ft_strlen(gnl->line));
+		return (1);
+	}
+	else if (flag & 2)
+	{
+		*line = ft_strjoinf(gnl->line, ft_strsub(*buf, 0, ft_strclen(*buf, '\n')), 2);
+		gnl->line = ft_strsubf(*buf, ft_strclen(*buf, '\n') + 1, BUFF_SIZE + 1);
+		return (1);
+	}
 	return (1);
 }
 
-static int		ft_linefeed_in_buf(char **line, t_gnl *gnl, char **buf)
-{
-	*line = ft_strjoinf(gnl->line, ft_strsub(*buf, 0, ft_strclen(*buf, '\n')), 2);
-	gnl->line = ft_strsub(*buf, ft_strclen(*buf, '\n') + 1, BUFF_SIZE + 1);
-	return (1);
-}
-
-static t_gnl		*ft_newlink(const int fd, t_gnl *gnl)
+static t_gnl	*ft_newlink(const int fd, t_gnl *gnl)
 {
 	if (!gnl)
 	{
@@ -38,8 +42,10 @@ static t_gnl		*ft_newlink(const int fd, t_gnl *gnl)
 	}
 	else
 	{
-		while (gnl->next)
+		while (gnl->next && gnl->fd != fd)
 			gnl = gnl->next;
+		if (gnl->fd == fd)
+			return (gnl);
 		if (!(gnl->next = (t_gnl *)malloc(sizeof(*gnl))))
 			return (NULL);
 		gnl->next->first = gnl->first;
@@ -67,20 +73,20 @@ static t_gnl	*ft_select_fd(const int fd, t_gnl *gnl)
 int				get_next_line(const int fd, char **line)
 {
 	static t_gnl	*gnl = NULL;
-	int		ret;
-	char		*buf;
+	int				ret;
+	char			*buf;
 
 	if (fd < 0 || BUFF_SIZE < 1 || !line || !(buf = ft_strnew(BUFF_SIZE)))
 		return (-1);
 	if (!(gnl = ft_select_fd(fd, gnl)))
 		return (-1);
-	if (ft_strlen(gnl->line) && ft_split_next(line, gnl))
+	if (ft_strlen(gnl->line) && ft_buf_manip(line, gnl, &buf, 1))
 		return (1);
 	while ((ret = read(fd, buf, BUFF_SIZE)) && ret > 0)
 	{
 		if (ft_isinstr(buf, '\n'))
 		{
-			return (ft_linefeed_in_buf(line, gnl, &buf));
+			return (ft_buf_manip(line, gnl, &buf, 2));
 		}
 		gnl->line = ft_strjoinf(gnl->line, buf, 3);
 		buf = ft_strnew(BUFF_SIZE);
@@ -91,12 +97,15 @@ int				get_next_line(const int fd, char **line)
 		gnl->line = NULL;
 		return (1);
 	}
-	else
+	if (!ret)
+	{
 		*line = NULL;
+		free(gnl->line);
+	}
 	return (ret);
 }
 
-/*int	main(int argc, char **argv)
+int	main(int argc, char **argv)
 {
 	int	i = 1;
 	int	fd_1 = 0;
@@ -114,5 +123,6 @@ int				get_next_line(const int fd, char **line)
 		i = get_next_line(fd_2, &line);
 		ft_putendl(line);
 	}
+	read(0, O_RDONLY, BUFF_SIZE);
 	return (1);
-}*/
+}

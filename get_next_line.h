@@ -6,7 +6,7 @@
 /*   By: grota <marvin@42.fr>                       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2017/12/18 12:51:52 by grota             #+#    #+#             */
-/*   Updated: 2019/02/03 18:03:26 by grota            ###   ########.fr       */
+/*   Updated: 2019/02/05 14:03:43 by grota            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,12 +19,12 @@
 
 typedef struct		s_gnl
 {
-	int		fd;
-	char		*line;
+	int				fd;
+	char			*line;
 	struct s_gnl	*next;
 	struct s_gnl	*first;
-}			t_gnl;
+}					t_gnl;
 
-int		get_next_line(const int fd, char **line);
+int					get_next_line(const int fd, char **line);
 
 #endif
